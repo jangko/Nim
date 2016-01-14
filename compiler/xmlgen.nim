@@ -99,7 +99,7 @@ proc xmlEscape(a: string): Rope =
     of '<':  res.add "&lt;"
     of '>':  res.add "&gt;"
     of '&':  res.add "&amp;"
-    of chr(0)..chr(31):
+    of chr(0)..chr(31), chr(0x80)..chr(0xff):
       res.add "&#" & $c.ord & ";"    
     else: res.add c
   result = rope(res)
@@ -112,7 +112,7 @@ proc genPlatInfo[T](a: var Rope, b: T) =
       a.add " $1=\"$2\"" % [rope(k), xmlEscape($v)]
 
 proc genHeader(): Rope =
-  result = ("<?xml version=\"1.1\" encoding=\"UTF-8\"?>$n" &
+  result = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>$n" &
             "<nim version=\"$1\">$n") % [xmlEscape(VersionAsString)]
 
   result.add "  <conditionalsymbols>" & tnl
@@ -401,7 +401,7 @@ proc genNode(n: PNode): Rope =
   of nkFloatLit..nkFloat128Lit:
     result.genAttr("value", genFloat(n.floatVal))
   of nkStrLit..nkTripleStrLit:
-    result.genAttr("value", $n.strVal)
+    result.genAttr("value", n.strVal)
   of nkSym:
     result.genAttr("value", n.sym)
   of nkIdent:
