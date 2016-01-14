@@ -446,6 +446,10 @@ proc processSwitch(switch, arg: string, pass: TCmdLinePass, info: TLineInfo) =
     processOnOffSwitch({optImplicitStatic}, arg, pass, info)
   of "patterns":
     processOnOffSwitch({optPatterns}, arg, pass, info)
+  of "xmlunprocessed":
+    processOnOffSwitch({optXmlUnprocessed}, arg, pass, info)
+  of "xmltransformed":
+    processOnOffSwitch({optXmlTransformed}, arg, pass, info)
   of "opt":
     expectArg(switch, arg, pass, info)
     case arg.normalize

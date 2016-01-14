@@ -13,7 +13,7 @@ import
   llstream, strutils, ast, astalgo, lexer, syntaxes, renderer, options, msgs,
   os, condsyms, rodread, rodwrite, times,
   wordrecg, sem, semdata, idents, passes, docgen, extccomp,
-  cgen, jsgen, json, nversion,
+  cgen, jsgen, json, nversion, xmlgen,
   platform, nimconf, importer, passaux, depends, vm, vmdef, types, idgen,
   docgen2, service, parser, modules, ccgutils, sigmatch, ropes, lists
 
@@ -228,6 +228,11 @@ proc resetMemory =
     GC_fullCollect()
     echo GC_getStatistics()
 
+proc commandGenerateXml =
+  semanticPasses()
+  registerPass(xmlgenPass)
+  compileProject()
+
 const
   SimulateCaasMemReset = false
   PrintRopeCacheStats = false
@@ -359,6 +364,9 @@ proc mainCommand* =
   of "nop", "help":
     # prevent the "success" message:
     gCmd = cmdDump
+  of "x", "xml":
+    gCmd = cmdGenXml
+    commandGenerateXml()
   else:
     rawMessage(errInvalidCommandX, command)
 

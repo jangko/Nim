@@ -34,8 +34,10 @@ type                          # please make sure we have under 32 options
     optProfiler,              # profiler turned on
     optImplicitStatic,        # optimization: implicit at compile time
                               # evaluation
-    optPatterns               # en/disable pattern matching
-
+    optPatterns,              # en/disable pattern matching
+    optXmlUnprocessed,        # xmlgen: generate unprocessed AST
+    optXmlTransformed         # xmlgen: generate transformed AST
+    
   TOptions* = set[TOption]
   TGlobalOption* = enum       # **keep binary compatible**
     gloptNone, optForceFullMake, optDeadCodeElim,
@@ -66,6 +68,7 @@ type                          # please make sure we have under 32 options
                               # also: generate header file
     optIdeDebug               # idetools: debug mode
     optIdeTerse               # idetools: use terse descriptions
+
   TGlobalOptions* = set[TGlobalOption]
   TCommands* = enum           # Nim's commands
                               # **keep binary compatible**
@@ -80,7 +83,8 @@ type                          # please make sure we have under 32 options
     cmdRst2html,              # convert a reStructuredText file to HTML
     cmdRst2tex,               # convert a reStructuredText file to TeX
     cmdInteractive,           # start interactive session
-    cmdRun                    # run the project via TCC backend
+    cmdRun,                   # run the project via TCC backend
+    cmdGenXml                 # generate XML from AST
   TStringSeq* = seq[string]
   TGCMode* = enum             # the selected GC
     gcNone, gcBoehm, gcGo, gcMarkAndSweep, gcRefc, gcV2, gcGenerational
@@ -100,7 +104,7 @@ var
   gOptions*: TOptions = {optObjCheck, optFieldCheck, optRangeCheck,
                          optBoundsCheck, optOverflowCheck, optAssert, optWarns,
                          optHints, optStackTrace, optLineTrace,
-                         optPatterns, optNilCheck}
+                         optPatterns, optNilCheck, optXmlTransformed}
   gGlobalOptions*: TGlobalOptions = {optThreadAnalysis}
   gExitcode*: int8
   gCmd*: TCommands = cmdNone  # the command

@@ -3,6 +3,7 @@ Advanced commands:
   //compileToCpp, cpp       compile project to C++ code
   //compileToOC, objc       compile project to Objective C code
   //js                      compile project to Javascript
+  //xml, x                  generate XML from AST
   //rst2html                convert a reStructuredText file to HTML
   //rst2tex                 convert a reStructuredText file to TeX
   //jsondoc                 extract the documentation to a json file
@@ -59,6 +60,8 @@ Advanced options:
   --taintMode:on|off        turn taint mode on|off
   --implicitStatic:on|off   turn implicit compile time evaluation on|off
   --patterns:on|off         turn pattern matching on|off
+  --xmlunprocessed:on|off   generate XML on unprocessed AST(default: off)
+  --xmltransformed:on|off   generate XML on transformed AST(default: on)
   --skipCfg                 do not read the general configuration file
   --skipUserCfg             do not read the user's configuration file
   --skipParentCfg           do not read the parent dirs' configuration files
