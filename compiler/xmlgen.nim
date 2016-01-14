@@ -99,8 +99,8 @@ proc xmlEscape(a: string): Rope =
     of '<':  res.add "&lt;"
     of '>':  res.add "&gt;"
     of '&':  res.add "&amp;"
-    of chr(13): res.add "&#13;"
-    of chr(10): res.add "&#10;"
+    of chr(0)..chr(31):
+      res.add "&#" & $c.ord & ";"    
     else: res.add c
   result = rope(res)
 
@@ -112,7 +112,7 @@ proc genPlatInfo[T](a: var Rope, b: T) =
       a.add " $1=\"$2\"" % [rope(k), xmlEscape($v)]
 
 proc genHeader(): Rope =
-  result = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>$n" &
+  result = ("<?xml version=\"1.1\" encoding=\"UTF-8\"?>$n" &
             "<nim version=\"$1\">$n") % [xmlEscape(VersionAsString)]
 
   result.add "  <conditionalsymbols>" & tnl
@@ -138,6 +138,16 @@ proc genHeader(): Rope =
 proc genFooter(): Rope =
   result = rope("</nim>" & tnl)
 
+proc setToStr[T](s: set[T]): string =
+  result = ""
+  let numElem = card(s)
+  var i = 0
+  for k in low(T)..high(T):
+    if k in s: 
+      result.add($k.int)
+      if i < numElem-1: result.add ','
+      inc i
+    
 proc genAttr(r: var Rope, name, value: string) =
   if value != nil:
     r.add " $1=\"$2\"" % [rope(name), xmlEscape(value)]
@@ -195,7 +205,7 @@ proc registerSym(s: PSym): int =
 proc genLineInfo(info: TLineInfo): Rope =
   result.genAttr("line", $info.line)
   result.genAttr("col", $info.col)
-  result.genAttr("fileIndex", $info.fileIndex)
+  result.genAttr("file", $info.fileIndex)
 
 proc registerInst(p: PInstantiation): int =
   let id = cast[int](unsafeAddr(p[]))
@@ -246,28 +256,54 @@ proc genFiles(): Rope =
     result.add genFile(fileInfos[i], toFullPath(i.int32), i)
   result.add "  </files>" & tnl
 
+proc genKind[T](name: string): Rope =
+  result = "  <$1>$n" % [rope(name)]
+  for x in low(T)..high(T):
+    result.add "    <kind name=\"$1\" id=\"$2\"/>$n" % [rope($x), rope($(x.int))]
+  result.add "  </$1>$n" % [rope(name)]
+  
+proc genKinds(): Rope =
+  result.add genKind[TNodeKind]("nodekind")
+  result.add genKind[TSymKind]("symkind")
+  result.add genKind[TMagic]("magic")
+  result.add genKind[TTypekind]("typekind")
+  result.add genKind[TLocKind]("lockind")
+  result.add genKind[TStorageLoc]("storageloc")
+  result.add genKind[TSymFlag]("symflag")
+  result.add genKind[TOption]("option")
+  result.add genKind[TTypeFlag]("typeflag")
+  result.add genKind[TLocFlag]("locflag")
+  result.add genKind[TNodeFlag]("nodeflag")
+  
+  result.add rope("  <callconv>" & tnl)
+  for x in low(TCallingConvention)..high(TCallingConvention):
+    result.add "    <kind name=\"$1\" id=\"$2\" str=\"$3\"/>$n" % [rope($x), rope($(x.int)), rope(CallingConvToStr[x])]
+  result.add "  </callconv>" & tnl
+    
 proc genLoc(t: TLoc): Rope =
-  result.genAttr("lockind", $t.k)
-  result.genAttr("locstorage", $t.s)
-  result.genAttr("locflags", $t.flags)
+  result.genAttr("lockind", $t.k.int)
+  result.genAttr("locstorage", $t.s.int)
+  result.genAttr("locflags", setToStr(t.flags))
   result.genAttr("loctype", t.t)
   result.genAttr("locr", t.r)
   result.genAttr("locheap", t.heapRoot)
 
 proc genSym(s: PSym): Rope =
-  result = rope("    <symbol")
+  result = rope("    <sym")
   result.genAttr("id", $s.id)
-  result.genAttr("kind", $s.kind)
-  result.genAttr("magic", $s.magic)
+  result.genAttr("kind", $s.kind.int)
+  result.genAttr("magic", $s.magic.int)
   result.genAttr("type", s.typ)
   result.genAttr("name", s.name)
   result.add genLineInfo(s.info)
   result.genAttr("owner", s.owner)
-  result.genAttr("flags", $s.flags)
+  
+  result.genAttr("flags", setToStr(s.flags))
+  
   result.genAttr("ast", s.ast)
-  result.genAttr("options", $s.options)
-  result.genAttr("position", $s.position)
-  result.genAttr("ofset", $s.offset)
+  result.genAttr("opt", setToStr(s.options))
+  result.genAttr("pos", $s.position)
+  result.genAttr("offset", $s.offset)
   result.add genLoc(s.loc)
   if s.annex != nil:
     result.genAttr("lib", $registerLib(s.annex))
@@ -305,7 +341,7 @@ proc genSym(s: PSym): Rope =
   else:
     result.add ">" & tnl
     result.add text
-    result.add "    </symbol>" & tnl
+    result.add "    </sym>" & tnl
 
 proc genLib(s: PLib): Rope =
   result = rope("    <lib")
@@ -319,13 +355,12 @@ proc genLib(s: PLib): Rope =
 proc genType(t: PType): Rope =
   result = rope("    <type")
   result.genAttr("id", $t.id)
-  result.genAttr("kind", $t.kind)
-  result.genAttr("callConv", $t.callConv)
-  result.genAttr("flags", $t.flags)
+  result.genAttr("kind", $t.kind.int)
+  result.genAttr("callConv", $t.callConv.int)
+  result.genAttr("flags", setToStr(t.flags))
   result.genAttr("n", t.n)
   result.genAttr("owner", t.owner)
   result.genAttr("sym", t.sym)
-  result.genAttr("owner", t.owner)
   result.genAttr("destructor", t.destructor)
   result.genAttr("deepCopy", t.deepCopy)
   result.genAttr("assign", t.assignment)
@@ -333,7 +368,6 @@ proc genType(t: PType): Rope =
   result.genAttr("align", $t.align)
   result.genAttr("lockLevel", $t.lockLevel)
   result.add genLoc(t.loc)
-  result.genAttr("align", $t.align)
 
   if t.sons.len == 0:
     result.add "/>" & tnl
@@ -357,8 +391,8 @@ proc genNode(n: PNode): Rope =
   result.genAttr("id", $getId(n))
   result.genAttr("type", n.typ)
   result.add genLineInfo(n.info)
-  result.genAttr("flags", $n.flags)
-  result.genAttr("kind", $n.kind)
+  result.genAttr("flags", setToStr(n.flags))
+  result.genAttr("kind", $n.kind.int)
   result.genAttr("comment", n.comment)
 
   case n.kind:
@@ -520,7 +554,8 @@ proc combineModules(outfile: string) =
     
   f.writeRope(genHeader())
   f.writeRope(genFiles())
-    
+  f.writeRope(genKinds())
+  
   for k in globals.modList:
     let infile = getXmlFileName(k)
     f.write(readFile(infile))
@@ -534,7 +569,7 @@ proc myClose(b: PPassContext, n: PNode): PNode =
   var m = BModule(b)
         
   var xml = rope("<module")
-  xml.genAttr("fileIndex", $m.module.position)
+  xml.genAttr("file", $m.module.position)
   xml.add ">" & tnl
   xml.add wholeCode(m)
   xml.add "</module>" & tnl
