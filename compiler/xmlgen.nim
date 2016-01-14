@@ -29,6 +29,7 @@ type
     scopeSet: HashSet[PScope]
     lastScope: HashSet[PScope]
     modList: TStrTable
+    roots: seq[PNode]
 
   PGlobals = ref TGlobals
 
@@ -76,6 +77,7 @@ proc newGlobals(): PGlobals =
   result.lastInst = initSet[PInstantiation]()
   result.scopeSet = initSet[PScope]()
   result.lastScope = initSet[PScope]()
+  result.roots = @[]
 
 var globals: PGlobals = nil
 
@@ -280,6 +282,13 @@ proc genKinds(): Rope =
     result.add "    <kind name=\"$1\" id=\"$2\" str=\"$3\"/>$n" % [rope($x), rope($(x.int)), rope(CallingConvToStr[x])]
   result.add "  </callconv>" & tnl
     
+proc genRoots(): Rope =
+  result.add rope("  <roots>" & tnl)
+  for n in globals.roots:
+    result.add "    <node id=\"$1\"/>$n" % [rope($getId(n))]
+  result.add "  </roots>" & tnl
+  globals.roots = @[]
+
 proc genLoc(t: TLoc): Rope =
   result.genAttr("lockind", $t.k.int)
   result.genAttr("locstorage", $t.s.int)
@@ -525,6 +534,8 @@ proc wholeCode*(m: BModule): Rope =
     result.add genInsts()
     result.add genScopes()
   
+  result.add genRoots()
+  
 proc processNode(m: BModule, n: PNode) =
   case n.kind
   of nkSym, nkIdent, nkCharLit..nkNilLit:
@@ -540,6 +551,7 @@ proc myProcess(b: PPassContext, n: PNode): PNode =
   result = n
   var m = BModule(b)
   if m.module == nil: internalError(n.info, "myProcess")
+  globals.roots.add n
   processNode(m, n)
   
 proc getXmlFileName(s: PSym): string = 
@@ -555,7 +567,7 @@ proc combineModules(outfile: string) =
   f.writeRope(genHeader())
   f.writeRope(genFiles())
   f.writeRope(genKinds())
-  
+    
   for k in globals.modList:
     let infile = getXmlFileName(k)
     f.write(readFile(infile))
