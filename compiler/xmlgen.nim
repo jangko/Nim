@@ -253,13 +253,14 @@ proc genFile(t: TFileInfo, fullPath: string, id: int): Rope =
   result.add "/>" & tnl
 
 proc genFiles(): Rope =
-  result = rope("  <files>" & tnl)
+  result.add "  <files len=\"$1\">$n" % [rope($fileInfos.len)]
   for i in 0..fileInfos.high:
     result.add genFile(fileInfos[i], toFullPath(i.int32), i)
   result.add "  </files>" & tnl
 
 proc genKind[T](name: string): Rope =
-  result = "  <$1>$n" % [rope(name)]
+  let len = high(T).int - low(T).int + 1
+  result = "  <$1 len=\"$2\">$n" % [rope(name), rope($len)]
   for x in low(T)..high(T):
     result.add "    <kind name=\"$1\" id=\"$2\"/>$n" % [rope($x), rope($(x.int))]
   result.add "  </$1>$n" % [rope(name)]
@@ -276,14 +277,15 @@ proc genKinds(): Rope =
   result.add genKind[TTypeFlag]("typeflag")
   result.add genKind[TLocFlag]("locflag")
   result.add genKind[TNodeFlag]("nodeflag")
-  
-  result.add rope("  <callconv>" & tnl)
+
+  let len = high(TCallingConvention).int - low(TCallingConvention).int + 1
+  result.add "  <callconv len=\"$1\">$n" % [rope($len)]
   for x in low(TCallingConvention)..high(TCallingConvention):
     result.add "    <kind name=\"$1\" id=\"$2\" str=\"$3\"/>$n" % [rope($x), rope($(x.int)), rope(CallingConvToStr[x])]
   result.add "  </callconv>" & tnl
     
 proc genRoots(): Rope =
-  result.add rope("  <roots>" & tnl)
+  result.add "  <roots len=\"$1\">$n" % [rope($globals.roots.len)]
   for n in globals.roots:
     result.add "    <node id=\"$1\"/>$n" % [rope($getId(n))]
   result.add "  </roots>" & tnl
@@ -381,6 +383,7 @@ proc genType(t: PType): Rope =
   if t.sons.len == 0:
     result.add "/>" & tnl
   else:
+    result.genAttr("len", $t.sons.len)
     result.add ">" & tnl
     for s in t.sons:
       if s != nil:
@@ -418,7 +421,8 @@ proc genNode(n: PNode): Rope =
   else:
     discard
 
-  if n.kind notin {nkSym, nkCharLit..nkNilLit, nkIdent}:
+  if n.kind notin {nkEmpty, nkSym, nkCharLit..nkNilLit, nkIdent}:
+    result.genAttr("len", $n.len)
     result.add ">" & tnl
     for s in n.sons:
       if s != nil:
@@ -461,7 +465,7 @@ proc genInst(p: PInstantiation): Rope =
 proc genNodes(): Rope =
   let s = difference(globals.nodeSet, globals.lastNode)
   if s.len == 0: return rope("")
-  result = rope("  <nodes>" & tnl)
+  result = "  <nodes len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genNode(k)
     globals.lastNode.incl(k)      
@@ -470,7 +474,7 @@ proc genNodes(): Rope =
 proc genSymbols(): Rope =  
   let s = difference(globals.symSet, globals.lastSymbol)
   if s.len == 0: return rope("")
-  result = rope("  <symbols>" & tnl)
+  result = "  <symbols len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genSym(k)
     globals.lastSymbol.incl(k)      
@@ -479,7 +483,7 @@ proc genSymbols(): Rope =
 proc genIdents(): Rope =  
   let s = difference(globals.identSet, globals.lastIdent)
   if s.len == 0: return rope("")
-  result = rope("  <idents>" & tnl)
+  result = "  <idents len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genIdent(k)
     globals.lastIdent.incl(k)    
@@ -488,7 +492,7 @@ proc genIdents(): Rope =
 proc genTypes(): Rope =
   let s = difference(globals.typeSet, globals.lastType)
   if s.len == 0: return rope("")
-  result = rope("  <types>" & tnl)  
+  result = "  <types len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genType(k)
     globals.lastType.incl(k)
@@ -497,7 +501,7 @@ proc genTypes(): Rope =
 proc genLibs(): Rope =  
   let s = difference(globals.libSet, globals.lastLib)
   if s.len == 0: return rope("")
-  result = rope("  <libs>" & tnl)
+  result = "  <libs len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genLib(k)
     globals.lastLib.incl(k)
@@ -506,7 +510,7 @@ proc genLibs(): Rope =
 proc genScopes(): Rope =
   let s = difference(globals.scopeSet, globals.lastScope)
   if s.len == 0: return rope("")
-  result = rope("  <scopes>" & tnl)
+  result = "  <scopes len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genScope(k)
     globals.lastScope.incl(k)
@@ -515,7 +519,7 @@ proc genScopes(): Rope =
 proc genInsts(): Rope =  
   let s = difference(globals.instSet, globals.lastInst)
   if s.len == 0: return rope("")
-  result = rope("  <insts>" & tnl)
+  result = "  <insts len=\"$1\">$n" % [rope($s.len)]
   for k in s:
     result.add genInst(k)
     globals.lastInst.incl(k)
