@@ -1036,7 +1036,7 @@ proc typeRelImpl(c: var TCandidate, f, aOrig: PType,
   if a.kind == tyGenericInst and
       skipTypes(f, {tyVar, tyLent}).kind notin {
         tyGenericBody, tyGenericInvocation,
-        tyGenericInst, tyGenericParam} + tyTypeClasses:
+        tyGenericInst, tyGenericParam, tyStmt} + tyTypeClasses:
     return typeRel(c, f, lastSon(a))
 
   if a.isResolvedUserTypeClass:
